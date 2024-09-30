@@ -1,0 +1,13 @@
+scikit-learn
+numpy
+pandas
+matplotlib
+scikit-learn
+seaborn
+statsmodels
+streamlit
+Flask==2.2.2
+requests==2.31.0
+moviepy==1.0.3
+google-generativeai==0.8.2
+

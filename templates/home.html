@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Educational Script and Video Generator</title>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            color: #444;
+            margin-bottom: 10px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        .section {
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .slider-container {
+            margin: 20px 0;
+        }
+        .slider-label {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+        input[type="range"] {
+            width: 100%;
+            margin-top: 10px;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        video {
+            margin-top: 20px;
+            width: 100%;
+            border-radius: 8px;
+        }
+        h2 {
+            margin-bottom: 10px;
+            font-size: 1.8em;
+            color: #333;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.2/axios.min.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Educational Script & Video Generator</h1>
+
+        <!-- User Input Section -->
+        <div class="section">
+            <h2>VidGyan</h2>
+            <input type="text" id="userInput" placeholder="Enter a topic for your educational video" required>
+
+            <!-- Slider for difficulty level -->
+            <div class="slider-container">
+                <label class="slider-label" for="difficulty">Set Difficulty Level: <span id="difficultyLabel">Kid-Friendly</span></label>
+                <input type="range" id="difficulty" min="0" max="1" step="0.1" value="0.5" oninput="updateDifficultyLabel()">
+            </div>
+
+            <button onclick="generateScript()">Generate Script</button>
+        </div>
+
+        <!-- Script Output Section -->
+        <div class="section" id="scriptSection" style="display: none;">
+            <h2>Generated Script</h2>
+            <div id="scriptOutput"></div>
+        </div>
+
+        <!-- Video Output Section -->
+        <div class="section" id="videoSection" style="display: none;">
+            <h2>Related Videos</h2>
+            <div id="videoResults"></div>
+        </div>
+    </div>
+
+    <script>
+        // Gemini API Key
+        const GENIE_API_KEY = "AIzaSyBzB-FbuQimtmUEoaXUwYdGoxUwTXvMO3I";  // Replace with your actual Gemini API key
+
+        // Pexels API Key
+        const PEXELS_API_KEY = 'Oe8LHdq5GMhzMQHbgjJfgaFWycoe70Vm061rCg36wDYLf3d52t2SLoPi';  // Replace with your Pexels API key
+
+        // Update difficulty label as the user moves the slider
+        function updateDifficultyLabel() {
+            const sliderValue = document.getElementById("difficulty").value;
+            const label = document.getElementById("difficultyLabel");
+
+            if (sliderValue <= 0.5) {
+                label.textContent = "Kid-Friendly";
+            } else {
+                label.textContent = "Professional";
+            }
+        }
+
+        // Function to generate educational script using Gemini API
+        async function generateScript() {
+            const topic = document.getElementById('userInput').value;
+            const difficulty = document.getElementById('difficulty').value;
+            const scriptOutput = document.getElementById('scriptOutput');
+            const scriptSection = document.getElementById('scriptSection');
+            const videoSection = document.getElementById('videoSection');
+
+            // Clear previous results
+            scriptOutput.innerHTML = '';
+            videoSection.style.display = 'none';
+
+            let explanationLevel = "for kids";
+            if (difficulty > 0.5) {
+                explanationLevel = "for professionals";
+            }
+
+            try {
+                const response = await axios.post(
+                    'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
+                    {
+                        contents: [{ parts: [{ text: `Write a 1500 word script for an educational video on ${topic}, including an introduction, explanation, theorems, sums, history, examples, and applications ${explanationLevel}.` }] }]
+                    },
+                    {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-goog-api-key': GENIE_API_KEY
+                        }
+                    }
+                );
+
+                // Get the generated script from the Gemini API response
+                const generatedText = response.data.candidates[0].content.parts[0].text;
+                scriptOutput.innerHTML = `<p>${generatedText.replace(/\n/g, "<br>")}</p>`;
+
+                // Extract keywords for video search (using simple logic)
+                const keywords = extractKeywords(generatedText, 5); // Extract 5 keywords
+
+                // Display the script section
+                scriptSection.style.display = 'block';
+
+                // Pass the extracted keywords to Pexels video search
+                fetchVideos(keywords);
+            } catch (error) {
+                console.error('Error generating script:', error);
+                scriptOutput.innerHTML = `<p>Error: ${error.message}</p>`;
+            }
+        }
+
+        // Function to extract keywords (you can improve this logic)
+        function extractKeywords(text, count) {
+            const words = text.split(/\s+/);
+            const wordCount = {};
+            
+            // Count occurrences of each word
+            words.forEach(word => {
+                word = word.toLowerCase().replace(/[.,]/g, "");  // Remove punctuation
+                if (word.length > 3) {  // Ignore short words
+                    wordCount[word] = (wordCount[word] || 0) + 1;
+                }
+            });
+
+            // Sort words by frequency and return the top `count` words
+            const sortedWords = Object.keys(wordCount).sort((a, b) => wordCount[b] - wordCount[a]);
+            return sortedWords.slice(0, count);
+        }
+
+        // Function to fetch videos from Pexels API using extracted keywords
+        function fetchVideos(keywords) {
+            const url = `https://api.pexels.com/videos/search?query=${encodeURIComponent(keywords.join(" "))}&per_page=5`;  // Search for videos using top 5 keywords
+
+            fetch(url, {
+                headers: {
+                    Authorization: PEXELS_API_KEY
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                displayVideos(data.videos);
+            })
+            .catch(error => {
+                console.error('Error fetching videos:', error);
+            });
+        }
+
+        // Function to display videos from Pexels
+        function displayVideos(videos) {
+            const videoResults = document.getElementById('videoResults');
+            videoResults.innerHTML = '';  // Clear previous results
+
+            if (videos.length > 0) {
+                videos.forEach(video => {
+                    const videoElement = document.createElement('video');
+                    videoElement.controls = true;
+                    videoElement.src = video.video_files[0].link;
+                    videoElement.width = 600;
+
+                    videoResults.appendChild(videoElement);
+                });
+
+                // Show the video section
+                document.getElementById('videoSection').style.display = 'block';
+            } else {
+                videoResults.textContent = 'No videos found.';
+            }
+        }
+    </script>
+
+</body>
+</html>
+

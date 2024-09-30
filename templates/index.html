@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to the Website</title>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 1.5rem;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 1rem;
+        }
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 0.5rem;
+            cursor: pointer;
+            border-bottom: 2px solid #ddd;
+            transition: all 0.3s ease;
+        }
+        .tab.active {
+            border-bottom-color: #007bff;
+            color: #007bff;
+        }
+        .form-container {
+            display: none;
+        }
+        .form-container.active {
+            display: block;
+        }
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            width: 100%;
+            padding: 0.5rem;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .google-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 1rem;
+            background-color: #fff;
+            color: #757575;
+            border: 1px solid #ddd;
+        }
+        .google-button img {
+            width: 18px;
+            margin-right: 0.5rem;
+        }
+        .forgot-password {
+            text-align: right;
+            margin-bottom: 1rem;
+        }
+        .forgot-password a {
+            color: #007bff;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        #message {
+            margin-top: 1rem;
+            text-align: center;
+            color: #28a745;
+        }
+        .error {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Welcome</h2>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="login">Login</div>
+            <div class="tab" data-tab="signup">Sign Up</div>
+        </div>
+
+        <div id="login-form" class="form-container active">
+            <form onsubmit="return submitForm('login')">
+                <input type="email" id="login-email" placeholder="Email" required>
+                <input type="password" id="login-password" placeholder="Password" required>
+                <div class="forgot-password">
+                    <a href="#" onclick="forgotPassword(); return false;">Forgot Password?</a>
+                </div>
+                <div class="g-recaptcha" data-sitekey="6LeF7lMqAAAAAGsJT8X9e4XYk_p8HyMi4afUKXu3"></div>
+                <button type="submit">Login</button>
+            </form>
+            <button class="google-button" onclick="signInWithGoogle()">
+                <img src="{{ url_for('static', filename='google.avif') }}" alt="Google Logo"> Sign in with Google
+            </button>
+        </div>
+
+        <div id="signup-form" class="form-container">
+            <form onsubmit="return submitForm('signup')">
+                <input type="email" id="signup-email" placeholder="Email" required>
+                <input type="password" id="signup-password" placeholder="Password" required>
+                <input type="password" id="signup-confirm-password" placeholder="Confirm Password" required>
+                <div class="g-recaptcha" data-sitekey="6LeF7lMqAAAAAGsJT8X9e4XYk_p8HyMi4afUKXu3"></div>
+                <button type="submit">Sign Up</button>
+            </form>
+            <button class="google-button" onclick="signUpWithGoogle()">
+                <img src="{{ url_for('static', filename='google.avif') }}" alt="Google Logo"> Sign up with Google
+            </button>
+        </div>
+
+        <div id="message"></div>
+    </div>
+
+    <script>
+        // Initialize Firebase
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyCuFvEvpIN6Y05QTBPUcFCgLNg4WBTHVcg",
+  authDomain: "vidgyaan-9ea60.firebaseapp.com",
+  projectId: "vidgyaan-9ea60",
+  storageBucket: "vidgyaan-9ea60.appspot.com",
+  messagingSenderId: "142470784489",
+  appId: "1:142470784489:web:2f397904e6fa8781f4d778",
+  measurementId: "G-LW08J7VW7X"
+};
+        firebase.initializeApp(firebaseConfig);
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab, .form-container').forEach(el => el.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(`${tab.dataset.tab}-form`).classList.add('active');
+            });
+        });
+
+        // Form submission
+        function submitForm(type) {
+            const email = document.getElementById(`${type}-email`).value;
+            const password = document.getElementById(`${type}-password`).value;
+            const message = document.getElementById('message');
+
+            if (grecaptcha.getResponse() === '') {
+                showMessage('Please complete the reCAPTCHA.', true);
+                return false;
+            }
+
+            if (type === 'login') {
+                firebase.auth().signInWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        const user = userCredential.user;
+
+                        // Save user email to localStorage
+                        localStorage.setItem('userEmail', user.email);
+
+                        // Redirect to home
+                        window.location.href = 'home.html';
+                    })
+                    .catch((error) => {
+                        showMessage(`Login error: ${error.message}`, true);
+                    });
+            } else if (type === 'signup') {
+                const confirmPassword = document.getElementById('signup-confirm-password').value;
+                if (password !== confirmPassword) {
+                    showMessage('Passwords do not match.', true);
+                    return false;
+                }
+                firebase.auth().createUserWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        const user = userCredential.user;
+
+                        // Save user email to localStorage
+                        localStorage.setItem('userEmail', user.email);
+
+                        // Redirect to home
+                        window.location.href = 'home.html';
+                    })
+                    .catch((error) => {
+                        showMessage(`Sign up error: ${error.message}`, true);
+                    });
+            }
+
+            return false; // Prevent form submission
+        }
+
+        // Google sign in
+        function signInWithGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            firebase.auth().signInWithPopup(provider)
+                .then((result) => {
+                    const user = result.user;
+
+                    // Save user email to localStorage
+                    localStorage.setItem('userEmail', user.email);
+
+                    // Redirect to home
+                    window.location.href = 'home.html';
+                })
+                .catch((error) => {
+                    showMessage(`Google sign in error: ${error.message}`, true);
+                });
+        }
+
+        // Google sign up (same as sign in for Google authentication)
+        function signUpWithGoogle() {
+            signInWithGoogle();
+        }
+
+        // Forgot password
+        function forgotPassword() {
+            const email = document.getElementById('login-email').value;
+            if (!email) {
+                showMessage('Please enter your email address.', true);
+                return;
+            }
+
+            firebase.auth().sendPasswordResetEmail(email)
+                .then(() => {
+                    showMessage('Password reset email sent. Please check your inbox.');
+                })
+                .catch((error) => {
+                    showMessage(`Error: ${error.message}`, true);
+                });
+        }
+
+        // Show message
+        function showMessage(msg, isError = false) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = msg;
+            messageDiv.className = isError ? 'error' : '';
+        }
+    </script>
+</body>
+</html>

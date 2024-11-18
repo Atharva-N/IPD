@@ -1,46 +1,42 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini Response Generator</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.2/axios.min.js"></script>
-</head>
-<body>
-    <h1>Gemini Response Generator</h1>
-    <textarea id="prompt" rows="4" cols="50" placeholder="Enter your prompt here"></textarea>
-    <br>
-    <button onclick="generateResponse()">Generate Response</button>
-    <div id="response"></div>
+from moviepy.editor import ImageClip, AudioFileClip
+from PIL import Image
 
-    <script>
-        const GENIE_API_KEY = "AIzaSyBzB-FbuQimtmUEoaXUwYdGoxUwTXvMO3I";
+def create_video_from_image_audio(image_path, audio_path, output_path, duration=None, fps=24):
+    # Open the image using PIL
+    img = Image.open(image_path)
+    
+    # Resize the image with the new Image.Resampling.LANCZOS method
+    img = img.resize((img.width, 720), Image.Resampling.LANCZOS)  # Resize based on height
+    
+    # Save the resized image temporarily
+    resized_image_path = "resized_image.jpg"
+    img.save(resized_image_path)
 
-        async function generateResponse() {
-            const prompt = document.getElementById('prompt').value;
-            const responseDiv = document.getElementById('response');
+    # Load the resized image as an ImageClip in moviepy
+    image_clip = ImageClip(resized_image_path)
+    
+    # Set the fps for the image clip
+    image_clip = image_clip.set_fps(fps)  # Set fps here
+    
+    # If no duration is specified, set it to the duration of the audio
+    if not duration:
+        audio_clip = AudioFileClip(audio_path)
+        duration = audio_clip.duration
+    
+    # Set the image clip duration
+    image_clip = image_clip.set_duration(duration)
+    
+    # Load the audio
+    audio_clip = AudioFileClip(audio_path)
+    
+    # Set the audio to the video
+    video = image_clip.set_audio(audio_clip)
+    
+    # Write the result to a file
+    video.write_videofile(output_path, codec="libx264", audio_codec="aac")
 
-            try {
-                const response = await axios.post(
-                    'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
-                    {
-                        contents: [{ parts: [{ text: prompt }] }]
-                    },
-                    {
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'x-goog-api-key': GENIE_API_KEY
-                        }
-                    }
-                );
-
-                const generatedText = response.data.candidates[0].content.parts[0].text;
-                responseDiv.innerHTML = `<h3>Response:</h3><p>${generatedText}</p>`;
-            } catch (error) {
-                console.error('Error:', error);
-                responseDiv.innerHTML = `<p>Error: ${error.message}</p>`;
-            }
-        }
-    </script>
-</body>
-</html>
+# Example usage:
+image_path = "temp_image_5.jpg"
+audio_path = "temp_audio_1.mp3"
+output_path = "output_video.mp4"
+create_video_from_image_audio(image_path, audio_path, output_path)

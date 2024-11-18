@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Educational Video Generator</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .video-container {
+            margin-top: 20px;
+            display: none;
+        }
+        
+        video {
+            width: 100%;
+            border-radius: 4px;
+        }
+        
+        .error {
+            color: red;
+            text-align: center;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Educational Video Generator</h1>
+        
+        <div class="form-group">
+            <label for="topic">Enter Topic:</label>
+            <input type="text" id="topic" name="topic" placeholder="e.g., Machine Learning" required>
+        </div>
+        
+        <button id="generate">Generate Video</button>
+        
+        <div class="loading">
+            <p>Generating video... This may take a few minutes.</p>
+            <img src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/0.16.1/images/loader-large.gif" alt="Loading">
+        </div>
+        
+        <div class="error">
+            An error occurred while generating the video. Please try again.
+        </div>
+        
+        <div class="video-container">
+            <video controls>
+                <source type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            $('#generate').click(function() {
+                const topic = $('#topic').val().trim();
+                
+                if (!topic) {
+                    alert('Please enter a topic');
+                    return;
+                }
+                
+                // Disable button and show loading
+                $('#generate').prop('disabled', true);
+                $('.loading').show();
+                $('.error').hide();
+                $('.video-container').hide();
+                
+                // Send request to generate video
+                $.ajax({
+                    url: '/generate_video',
+                    method: 'POST',
+                    data: { topic: topic },
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            // Update video source and show container
+                            $('.video-container video source').attr('src', response.video_path);
+                            $('.video-container video')[0].load();
+                            $('.video-container').show();
+                        } else {
+                            $('.error').show();
+                        }
+                    },
+                    error: function() {
+                        $('.error').show();
+                    },
+                    complete: function() {
+                        // Re-enable button and hide loading
+                        $('#generate').prop('disabled', false);
+                        $('.loading').hide();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
